@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,45 +9,63 @@ import (
 	"time"
 )
 
-type ApiCallResult struct {
-	ResponseBody    string
-	RequestEndpoint string
+type ViaCepResult struct {
+	Cep         string `json:"cep"`
+	Logradouro  string `json:"logradouro"`
+	Complemento string `json:"complemento"`
+	Bairro      string `json:"bairro"`
+	Localidade  string `json:"localidade"`
+	Uf          string `json:"uf"`
+	Ibge        string `json:"ibge"`
+	Gia         string `json:"gia"`
+	Ddd         string `json:"ddd"`
+	Siafi       string `json:"siafi"`
+}
+
+type ApiCEPResult struct {
+	Status     int    `json:"status"`
+	Code       string `json:"code"`
+	State      string `json:"state"`
+	City       string `json:"city"`
+	District   string `json:"district"`
+	Address    string `json:"address"`
+	Ok         bool   `json:"ok"`
+	Message    string `json:"message"`
+	StatusText string `json:"statusText"`
 }
 
 func main() {
 
 	for _, cep := range os.Args[1:] {
-		viaCepChannel := make(chan ApiCallResult)
-		apiCepChannel := make(chan ApiCallResult)
+		viaCepChannel := make(chan ViaCepResult)
+		apiCepChannel := make(chan ApiCEPResult)
 
-		go func(cep string) {
-			requestUrl := fmt.Sprintf("http://viacep.com.br/ws/%s/json/", cep)
-			viaCepChannel <- ApiCall(requestUrl)
+		viaCEPRequestEndpoint := fmt.Sprintf("http://viacep.com.br/ws/%s/json/", cep)
+		apiCepRequestEndpoint := fmt.Sprintf("https://cdn.apicep.com/file/apicep/%s.json", cep)
 
-		}(cep)
+		go func() {
+			viaCepChannel <- ApiCall[ViaCepResult](viaCEPRequestEndpoint)
+		}()
 
-		go func(cep string) {
-			requestUrl := fmt.Sprintf("https://cdn.apicep.com/file/apicep/%s.json", cep)
-			apiCepChannel <- ApiCall(requestUrl)
-
-		}(cep)
+		go func() {
+			apiCepChannel <- ApiCall[ApiCEPResult](apiCepRequestEndpoint)
+		}()
 
 		select {
 		case viaCepResponse := <-viaCepChannel:
-			fmt.Printf("Request endpoint: %v\n\nRsponse:\n\n %v\n",
-				viaCepResponse.RequestEndpoint,
-				viaCepResponse.ResponseBody)
+			fmt.Printf("VIA CEP Request endpoint: %v\n\nRsponse:\n\n %v\n",
+				viaCEPRequestEndpoint, viaCepResponse)
 		case apiCepResponse := <-apiCepChannel:
-			fmt.Printf("Request endpoint: %v\n\nRsponse:\n\n %v\n",
-				apiCepResponse.RequestEndpoint,
-				apiCepResponse.ResponseBody)
+			fmt.Printf("API CEP Request endpoint: %v\n\nRsponse:\n\n %v\n",
+				apiCepRequestEndpoint,
+				apiCepResponse)
 		case <-time.After(time.Second * 1):
 			println("Timeout")
 		}
 	}
 }
 
-func ApiCall(endpoint string) ApiCallResult {
+func ApiCall[T interface{}](endpoint string) T {
 	resp, err := http.Get(endpoint)
 
 	if err != nil {
@@ -60,8 +79,12 @@ func ApiCall(endpoint string) ApiCallResult {
 		panic(err)
 	}
 
-	return ApiCallResult{
-		ResponseBody:    string(body),
-		RequestEndpoint: endpoint,
+	var result T
+	err = json.Unmarshal(body, &result)
+
+	if err != nil {
+		panic(err)
 	}
+
+	return result
 }
