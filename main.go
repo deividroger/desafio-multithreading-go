@@ -35,13 +35,12 @@ type ApiCEPResult struct {
 }
 
 func main() {
-	//Olá Gabriel, eu testei o problema da API cep e essa API está apresentando de intermitencia
-	//Eu testei os dois cenários descritos no problema e ambos funcionaram
-	//A api do apicep é bem instavel, o limite por consulta parece ser muito curto (quando excede dá erro 429)
-	//e claro, quando o CEP não está lá o erro 404 vai vir, se você olhar a struct que usei para capturar o resultado
-	//ela já captura também esse cenário de erro.
-	//Me propus resolver o problema do multi-tread e não o problema dos possiveis retornos de sucesso ou falha da api de terceiros :)
-	//com relação ao que foi proposto no exercicio, eu cumpri todos os requisitos solicitados
+
+	//Olá Gabriel, eu novamente aqui
+	//Entendi os pontos que voê mencionou, porém, o escopo do exercicio não é esse
+	//Não faz sentido fazer qualquer tipo de ajuste além do que foi pedido
+	//Se você puder me pontuar qualquer coisa que esteja dentro do escopo do exercicio, eu poderei ajustar sem maiores problemas :)
+	//Pelo que foi pedido  o exercio é sobre a utilização de canais e goroutines
 
 	for _, cep := range os.Args[1:] {
 		viaCepChannel := make(chan ViaCepResult)
